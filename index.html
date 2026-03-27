@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>岚图HUD鸿蒙CANFD报文解析工具 | 0xF1心跳 & 0xF7日志解析</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, -apple-system, sans-serif;
+            background: #f0f4f8;
+            margin: 0;
+            padding: 24px 16px;
+            color: #1e2a3a;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02);
+            padding: 24px 28px;
+            margin-bottom: 28px;
+            transition: all 0.2s;
+        }
+
+        .header {
+            border-bottom: 2px solid #e9edf2;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #1e6f5c, #289672);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header p {
+            color: #5b6e8c;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            background: #eef2ff;
+            color: #1e40af;
+            border-radius: 40px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        textarea {
+            width: 100%;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            padding: 16px;
+            border: 1px solid #cfdfed;
+            border-radius: 20px;
+            background: #fafcff;
+            resize: vertical;
+            transition: 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #289672;
+            box-shadow: 0 0 0 3px rgba(40,150,114,0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0 12px;
+        }
+
+        button {
+            background: #1e6f5c;
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        button:hover {
+            background: #0f5a49;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #e2e8f0;
+            color: #2c3e50;
+            box-shadow: none;
+        }
+
+        button.secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .error-msg {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-radius: 20px;
+            padding: 12px 20px;
+            margin-top: 16px;
+            font-size: 0.85rem;
+            border-left: 4px solid #ef4444;
+        }
+
+        .result-area {
+            margin-top: 28px;
+            overflow-x: auto;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        .result-table th {
+            background: #f1f5f9;
+            text-align: left;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: #1e2a3a;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .result-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #eef2f6;
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        .result-table tr:hover {
+            background: #fafcff;
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: #0f3b2c;
+            width: 28%;
+        }
+
+        .raw-value {
+            font-family: monospace;
+            background: #f8fafc;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        .sub-detail {
+            font-size: 0.75rem;
+            color: #5b6e8c;
+            margin-top: 4px;
+            border-left: 2px solid #cbd5e1;
+            padding-left: 10px;
+        }
+
+        .bit-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 5px;
+        }
+
+        .bit-item {
+            background: #eef2ff;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 20px 0 12px 0;
+            padding-left: 10px;
+            border-left: 5px solid #289672;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #7c8ba0;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 680px) {
+            .card {
+                padding: 16px;
+            }
+            .result-table th, .result-table td {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="header">
+            <h1>📡 岚图HUD · 鸿蒙CANFD报文解析器</h1>
+            <p>支持非工程模式心跳报文 <code>0xF1</code> 和 日志信息2报文 <code>0xF7</code> 完整解析 | 遵循协议V1.14</p>
+            <div style="margin-top: 8px;"><span class="badge">✨ 自动识别命令字 F1 / F7</span> <span class="badge" style="background:#e6f7ec;">🔍 粘贴完整hex串</span></div>
+        </div>
+
+        <div>
+            <label style="font-weight: 500; margin-bottom: 8px; display: block;">📝 原始报文 (十六进制，支持带空格)</label>
+            <textarea id="hexInput" rows="3" placeholder="例如: AA0000AA0036F1010000E3000102014B4C050005010211000A4B00000001000000000029FD5CE20002000000005001050002800101024802020000000075A02E"></textarea>
+            <div class="btn-group">
+                <button id="parseBtn">🔎 解析报文</button>
+                <button id="exampleF1Btn" class="secondary">📋 填充F1示例</button>
+                <button id="exampleF7Btn" class="secondary">📋 填充F7示例</button>
+                <button id="clearBtn" class="secondary">🗑️ 清空</button>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="result-area"></div>
+    </div>
+    <footer>
+        基于岚图HUD鸿蒙CANFD方案交互协议 V1.14 · 解析字段严格遵循 0xF1心跳(54字节) 及 0xF7日志信息2
+    </footer>
+</div>
+
+<script>
+    (function(){
+        // ---------- 通用工具 ----------
+        function hexToBytes(hexStr) {
+            let clean = hexStr.replace(/\s+/g, '');
+            if (clean.length % 2 !== 0) {
+                throw new Error("十六进制字符串长度必须为偶数");
+            }
+            const bytes = [];
+            for (let i = 0; i < clean.length; i += 2) {
+                bytes.push(parseInt(clean.substr(i, 2), 16));
+            }
+            return new Uint8Array(bytes);
+        }
+
+        function bytesToHex(bytes, start, len) {
+            const slice = bytes.slice(start, start + len);
+            return Array.from(slice).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
+
+        function toUint16BE(bytes, offset) {
+            return (bytes[offset] << 8) | bytes[offset+1];
+        }
+
+        function toUint32BE(bytes, offset) {
+            return (bytes[offset] << 24) | (bytes[offset+1] << 16) | (bytes[offset+2] << 8) | bytes[offset+3];
+        }
+
+        function toInt16BE(bytes, offset) {
+            let val = toUint16BE(bytes, offset);
+            if (val >= 0x8000) return val - 0x10000;
+            return val;
+        }
+
+        // 带符号步数 (bit14为符号位, 协议说明: bit14为正负位，1代表负值)
+        function parseSignedSteps(raw16) {
+            const signBit = (raw16 >> 14) & 1;
+            const absVal = raw16 & 0x3FFF; // 低14位绝对值
+            return signBit === 1 ? -absVal : absVal;
+        }
+
+        // 温度转换 (实际值 = 原始 - 50)
+        function tempFromRaw(raw) {
+            if (raw === undefined) return '--';
+            const real = raw - 50;
+            return `${real}℃ (0x${raw.toString(16).padStart(2,'0')})`;
+        }
+
+        // 故障位映射
+        function parseFaultBytes(byte0, byte1) {
+            const faults = [];
+            const map = [
+                {bit:0, desc:"过热保护"},
+                {bit:1, desc:"LED芯片故障脚故障"},
+                {bit:2, desc:"电机芯片故障脚故障(H66A开路)"},
+                {bit:3, desc:"电池欠压(<8V)"},
+                {bit:4, desc:"电池过压(>16.5V)"},
+                {bit:5, desc:"辅助电源1故障"},
+                {bit:6, desc:"辅助电源2故障"},
+                {bit:7, desc:"CDC节点丢失故障"}
+            ];
+            for (let m of map) {
+                if (byte0 & (1 << m.bit)) faults.push(m.desc);
+            }
+            const map2 = [
+                {bit:0, desc:"LCD屏连接故障"},
+                {bit:1, desc:"LED连接故障"},
+                {bit:2, desc:"lcd温感电阻开路/短路(H77A)"},
+                {bit:3, desc:"光感连接故障(H53B)"},
+                {bit:4, desc:"解串lock丢失故障(>10s)"},
+                {bit:5, desc:"防阳光倒灌策略生效"},
+                {bit:6, desc:"TFT故障引脚故障"},
+                {bit:7, desc:"预留"}
+            ];
+            for (let m of map2) {
+                if (byte1 & (1 << m.bit)) faults.push(m.desc);
+            }
+            return faults.length ? faults.join("；") : "无故障";
+        }
+
+        // 开关状态解析 (Byte2, Byte3)
+        function parseSwitchStatus(byte2, byte3) {
+            const items = [];
+            items.push(`刚上电限位开关: ${byte2 & 0x01 ? "触发" : "未触发"}`);
+            items.push(`实时解串lock电平: ${(byte2>>1)&1 ? "高" : "低"}`);
+            items.push(`实时限位开关: ${(byte2>>4)&1 ? "触发" : "未触发"}`);
+            items.push(`步进电机PPS策略: ${(byte2>>5)&1 ? "默认PPS" : "低温策略PPS"}`);
+            items.push(`KL15信号: ${(byte2>>6)&1 ? "激活" : "未激活"}`);
+            items.push(`HUD开关状态: ${(byte2>>7)&1 ? "开" : "关"}`);
+            items.push(`车辆模式背光(OTA): ${byte3 & 1 ? "熄灭(OTA模式)" : "正常(no_ota)"}`);
+            items.push(`PEPS背光控制: ${(byte3>>1)&1 ? "熄灭(非LocalOn)" : "允许开"}`);
+            items.push(`DLP背光开关: ${(byte3>>2)&1 ? "熄灭(投影中)" : "可打开"}`);
+            return items;
+        }
+
+        // 环境光信息位
+        function parseAmbientInfo(byteVal) {
+            const valid = byteVal & 0x01;
+            const sensorFault = (byteVal>>1) & 1;
+            const rainFault = (byteVal>>2) & 1;
+            return `报文有效: ${valid ? "是" : "否"}；环境光传感器故障: ${sensorFault ? "故障" : "正常"}；雨量光传感器故障: ${rainFault ? "故障" : "正常"}`;
+        }
+
+        // LCD状态机 & 畸变状态机
+        function parseLcdDistState(byteVal) {
+            const lcdState = (byteVal >> 4) & 0x0F;
+            const distState = byteVal & 0x0F;
+            const lcdMap = {0:"初始(等待开屏)",1:"正常运行",2:"故障恢复中"};
+            const distMap = {0:"初始化中",1:"内外时钟切换",2:"清除故障",3:"等待PLL时钟lock",4:"正常运行中",5:"等待故障恢复中"};
+            return `LCD:${lcdMap[lcdState] || '保留'} (${lcdState}) | 畸变:${distMap[distState] || '保留'} (${distState})`;
+        }
+
+        // 车辆模式映射
+        function vehicleModeStr(mode) {
+            const map = {0x0:"Initial",0x1:"Normal",0x2:"Factory",0x3:"Transportation",0x4:"Collision",0x5:"OTA",0xF:"Invalid"};
+            return map[mode] || `0x${mode.toString(16)}`;
+        }
+        function powerModeStr(mode) {
+            const map = {0x0:"DEFAULT",0x1:"OFF",0x2:"Local ON",0x3:"Remote ON",0x7:"INVALID"};
+            return map[mode] || `未知(0x${mode.toString(16)})`;
+        }
+        function cdcContentStr(val) {
+            const map = {0x0:"正常显示",0x1:"标准图像1(1点图)",0x2:"标准图像2(重影检测)",0x3:"标准图像3(畸变检测)",0x4:"标准图像4(九点图)",0x50:"初始值",0xFF:"Invalid"};
+            return map[val] || `预留0x${val.toString(16)}`;
+        }
+
+        // ----- 解析 F1 心跳报文 (54字节消息体)-----
+        function parseF1Payload(payloadBytes) {
+            if (payloadBytes.length !== 54) {
+                throw new Error(`F1消息体长度应为54字节，实际${payloadBytes.length}字节`);
+            }
+            let offset = 0;
+            const faultWord = toUint16BE(payloadBytes, offset); offset += 2;   // 故障信息
+            const faultByte0 = (faultWord >> 8) & 0xFF;
+            const faultByte1 = faultWord & 0xFF;
+            const switchWord = toUint16BE(payloadBytes, offset); offset += 2;   // 开关/状态
+            const switchByte2 = (switchWord >> 8) & 0xFF;
+            const switchByte3 = switchWord & 0xFF;
+            const powerMode = payloadBytes[offset++];
+            const hwDistType = payloadBytes[offset++];
+            const distActive = payloadBytes[offset++];
+            const ledTempRaw = payloadBytes[offset++];
+            const lcdTempRaw = payloadBytes[offset++];
+            const brightnessLevel = payloadBytes[offset++];
+            const pwm = toUint16BE(payloadBytes, offset); offset += 2;
+            const heightLevel = payloadBytes[offset++];
+            const motorStepsAbs = toUint16BE(payloadBytes, offset); offset += 2;
+            const deserLockLostCnt = toUint16BE(payloadBytes, offset); offset += 2;
+            const h77aNtcMax = payloadBytes[offset++];
+            const opticalOrReg3 = bytesToHex(payloadBytes, offset, 3); offset += 3;
+            const lcdResetCnt = payloadBytes[offset++];
+            const distErrCnt = payloadBytes[offset++];
+            const distRegVal = bytesToHex(payloadBytes, offset, 4); offset += 4;
+            const distCrc = toUint16BE(payloadBytes, offset); offset += 2;
+            const calibCrc = toUint16BE(payloadBytes, offset); offset += 2;
+            const ambientFW = toUint16BE(payloadBytes, offset); offset += 2;
+            const ambientAMB = toUint16BE(payloadBytes, offset); offset += 2;
+            const zeroOffsetStepsRaw = toUint16BE(payloadBytes, offset); offset += 2;
+            const cdcContent = payloadBytes[offset++];
+            const ambientInfoByte = payloadBytes[offset++];
+            const hRes = toUint16BE(payloadBytes, offset); offset += 2;
+            const vRes = toUint16BE(payloadBytes, offset); offset += 2;
+            const lcdDistState = payloadBytes[offset++];
+            const vehicleMode = payloadBytes[offset++];
+            const lastMotorSteps = toUint16BE(payloadBytes, offset); offset += 2;
+            const socDistState = payloadBytes[offset++];
+            const powerModeReal = payloadBytes[offset++];
+            const backlightFaultReg = toUint16BE(payloadBytes, offset); offset += 2;
+            const superEcoState = payloadBytes[offset++];
+            const vcuLimitState = payloadBytes[offset++];
+            const mcuResetCnt = payloadBytes[offset++];
+
+            // 附加解析
+            const zeroOffsetSteps = parseSignedSteps(zeroOffsetStepsRaw);
+            const hwDistTypeStr = {0x00:"畸变芯片V42",0x01:"畸变芯片V40",0x02:"软畸变方案"}[hwDistType] || `未知(0x${hwDistType.toString(16)})`;
+            const distActiveStr = distActive === 1 ? "已生效" : "未生效";
+            const pwmPercent = (pwm / 10).toFixed(1) + "‰"; // 千分比
+            return {
+                basic: { faultDesc: parseFaultBytes(faultByte0, faultByte1), switchDesc: parseSwitchStatus(switchByte2, switchByte3) },
+                fields: [
+                    { name: "故障信息 (2B)", raw: `0x${faultWord.toString(16).padStart(4,'0')}`, parsed: parseFaultBytes(faultByte0, faultByte1) },
+                    { name: "开关/状态信息 (2B)", raw: `0x${switchWord.toString(16).padStart(4,'0')}`, parsed: parseSwitchStatus(switchByte2, switchByte3).join("；") },
+                    { name: "电源工作模式(apk下发)", raw: `0x${powerMode.toString(16).padStart(2,'0')}`, parsed: powerMode === 0 ? "关" : "开" },
+                    { name: "HUD畸变硬件方案", raw: `0x${hwDistType.toString(16).padStart(2,'0')}`, parsed: hwDistTypeStr },
+                    { name: "畸变生效状态", raw: `0x${distActive.toString(16).padStart(2,'0')}`, parsed: distActiveStr },
+                    { name: "LED温度", raw: `0x${ledTempRaw.toString(16).padStart(2,'0')}`, parsed: tempFromRaw(ledTempRaw) },
+                    { name: "LCD温度", raw: `0x${lcdTempRaw.toString(16).padStart(2,'0')}`, parsed: tempFromRaw(lcdTempRaw) },
+                    { name: "亮度等级", raw: `${brightnessLevel}`, parsed: `等级${brightnessLevel}` },
+                    { name: "PWM", raw: `0x${pwm.toString(16).padStart(4,'0')}`, parsed: `${pwm} (${pwmPercent})` },
+                    { name: "高度等级", raw: `${heightLevel}`, parsed: `档位${heightLevel}` },
+                    { name: "电机绝对步数", raw: `0x${motorStepsAbs.toString(16).padStart(4,'0')}`, parsed: `${motorStepsAbs}步` },
+                    { name: "解串Lock拉低丢失计数", raw: `0x${deserLockLostCnt.toString(16).padStart(4,'0')}`, parsed: `${deserLockLostCnt}次` },
+                    { name: "H77A排线NTC最大NTC值", raw: `0x${h77aNtcMax.toString(16).padStart(2,'0')}`, parsed: `${h77aNtcMax-50}℃ (原始+50)` },
+                    { name: "H53B光感和/H77A友达屏故障", raw: `${opticalOrReg3}`, parsed: `原始值: ${opticalOrReg3}` },
+                    { name: "LCD复位次数", raw: `0x${lcdResetCnt.toString(16).padStart(2,'0')}`, parsed: `${lcdResetCnt}次` },
+                    { name: "畸变错误处理次数/解串配置错误", raw: `0x${distErrCnt.toString(16).padStart(2,'0')}`, parsed: `${distErrCnt}次` },
+                    { name: "畸变芯片错误寄存器", raw: `${distRegVal}`, parsed: `V40:0xF0 / V42:0x9006,0x9008` },
+                    { name: "畸变矫正系数CRC16", raw: `0x${distCrc.toString(16).padStart(4,'0')}`, parsed: `0x${distCrc.toString(16)}` },
+                    { name: "下线标定参数CRC16", raw: `0x${calibCrc.toString(16).padStart(4,'0')}`, parsed: `0x${calibCrc.toString(16)}` },
+                    { name: "当前环境光FW", raw: `0x${ambientFW.toString(16).padStart(4,'0')}`, parsed: `${ambientFW}` },
+                    { name: "当前环境光AMB", raw: `0x${ambientAMB.toString(16).padStart(4,'0')}`, parsed: `${ambientAMB}` },
+                    { name: "零位偏差步数", raw: `0x${zeroOffsetStepsRaw.toString(16).padStart(4,'0')}`, parsed: `${zeroOffsetSteps}步 (符号位bit14)` },
+                    { name: "0x297-CDC出图内容", raw: `0x${cdcContent.toString(16).padStart(2,'0')}`, parsed: cdcContentStr(cdcContent) },
+                    { name: "环境光信息", raw: `0x${ambientInfoByte.toString(16).padStart(2,'0')}`, parsed: parseAmbientInfo(ambientInfoByte) },
+                    { name: "输入解串水平分辨率", raw: `0x${hRes.toString(16).padStart(4,'0')}`, parsed: `${hRes} px` },
+                    { name: "输入解串垂直分辨率", raw: `0x${vRes.toString(16).padStart(4,'0')}`, parsed: `${vRes} px` },
+                    { name: "LCD/畸变状态机", raw: `0x${lcdDistState.toString(16).padStart(2,'0')}`, parsed: parseLcdDistState(lcdDistState) },
+                    { name: "0x4FE-Vehicle_Mode", raw: `0x${vehicleMode.toString(16).padStart(2,'0')}`, parsed: vehicleModeStr(vehicleMode) },
+                    { name: "上次关机电机归零步数", raw: `0x${lastMotorSteps.toString(16).padStart(4,'0')}`, parsed: `${lastMotorSteps}步` },
+                    { name: "SOC回复软畸变状态", raw: `0x${socDistState.toString(16).padStart(2,'0')}`, parsed: socDistState === 0 ? "渲染应答成功" : (socDistState === 1 ? "渲染应答失败" : "Soc未回复") },
+                    { name: "0x2C1电源工作模式实时", raw: `0x${powerModeReal.toString(16).padStart(2,'0')}`, parsed: powerModeStr(powerModeReal) },
+                    { name: "背光芯片LED_Fault_Status", raw: `0x${backlightFaultReg.toString(16).padStart(4,'0')}`, parsed: `寄存器值: 0x${backlightFaultReg.toString(16)}` },
+                    { name: "0x2C8超级省电状态", raw: `0x${superEcoState.toString(16).padStart(2,'0')}`, parsed: superEcoState === 0xFF ? "无效" : `${superEcoState}` },
+                    { name: "0x3FC-VCU功率限制状态", raw: `0x${vcuLimitState.toString(16).padStart(2,'0')}`, parsed: vcuLimitState === 0xFF ? "无效/未收到" : `${vcuLimitState}` },
+                    { name: "MCU复位累加计数", raw: `0x${mcuResetCnt.toString(16).padStart(2,'0')}`, parsed: `${mcuResetCnt}次` }
+                ]
+            };
+        }
+
+        // 解析 F7 日志信息2 (54字节)
+        function parseF7Payload(payloadBytes) {
+            if (payloadBytes.length !== 54) {
+                throw new Error(`F7消息体长度应为54字节，实际${payloadBytes.length}字节`);
+            }
+            let offset = 0;
+            const reserved = payloadBytes[offset++];
+            const tftScreenByte = payloadBytes[offset++];
+            const tftFaultReg = bytesToHex(payloadBytes, offset, 3); offset += 3;
+            const motorHomeSteps = toUint16BE(payloadBytes, offset); offset += 2;
+            const boostFaultReg = toUint16BE(payloadBytes, offset); offset += 2;
+            const voltageFaultReg = toUint16BE(payloadBytes, offset); offset += 2;
+            const mcuResetReason = bytesToHex(payloadBytes, offset, 4); offset += 4;
+            // 剩余未定义区域 (协议预留)
+            const remaining = payloadBytes.slice(offset);
+            const tftScheme = (tftScreenByte >> 4) & 0x0F;
+            const tftDesc = tftScheme === 0 ? "京瓷屏" : (tftScheme === 1 ? "友达屏" : `保留(${tftScheme})`);
+            return {
+                fields: [
+                    { name: "预留", raw: `0x${reserved.toString(16).padStart(2,'0')}`, parsed: `0x${reserved.toString(16)}` },
+                    { name: "TFT屏方案", raw: `0x${tftScreenByte.toString(16).padStart(2,'0')}`, parsed: `${tftDesc} (高4位)` },
+                    { name: "TFT屏故障寄存器信息", raw: `${tftFaultReg}`, parsed: `原始3字节: ${tftFaultReg}` },
+                    { name: "当前电机归零步数", raw: `0x${motorHomeSteps.toString(16).padStart(4,'0')}`, parsed: `${motorHomeSteps}步` },
+                    { name: "背光芯片Boost相关故障", raw: `0x${boostFaultReg.toString(16).padStart(4,'0')}`, parsed: `0x${boostFaultReg.toString(16)}` },
+                    { name: "背光芯片电压相关故障", raw: `0x${voltageFaultReg.toString(16).padStart(4,'0')}`, parsed: `0x${voltageFaultReg.toString(16)}` },
+                    { name: "MCU复位原因", raw: `${mcuResetReason}`, parsed: `原始值: ${mcuResetReason}` }
+                ],
+                remaining: remaining.length ? `未定义区域(${remaining.length}字节): ${bytesToHex(remaining, 0, remaining.length)}` : null
+            };
+        }
+
+        // 主解析入口
+        function parseMessage(hexString) {
+            const rawBytes = hexToBytes(hexString);
+            if (rawBytes.length < 64) {
+                throw new Error(`报文长度不足64字节，实际${rawBytes.length}字节，需要完整CANFD帧(帧头+长度+命令+流水号+消息体+CRC)`);
+            }
+            // 提取固定头部
+            const header = bytesToHex(rawBytes, 0, 4);  // AA0000AA
+            const msgLenRaw = toUint16BE(rawBytes, 4);
+            const cmdId = rawBytes[6];
+            const seq = rawBytes[7];
+            const expectedBodyLen = msgLenRaw;
+            const totalCalc = 4+2+1+1+expectedBodyLen+2;
+            if (rawBytes.length < totalCalc) {
+                throw new Error(`报文不完整，消息体长度声明${expectedBodyLen}，但实际字节不足`);
+            }
+            const payload = rawBytes.slice(8, 8+expectedBodyLen);
+            const crcRecv = toUint16BE(rawBytes, 8+expectedBodyLen);
+            const cmdHex = `0x${cmdId.toString(16).toUpperCase()}`;
+            let parseResult = null;
+            if (cmdId === 0xF1) {
+                parseResult = parseF1Payload(payload);
+            } else if (cmdId === 0xF7) {
+                parseResult = parseF7Payload(payload);
+            } else {
+                throw new Error(`暂不支持命令ID: ${cmdHex}，仅支持0xF1/0xF7`);
+            }
+            return { header, msgLen: expectedBodyLen, cmdId, seq, crcRecv, payloadLen: expectedBodyLen, parseResult, rawLen: rawBytes.length };
+        }
+
+        function renderResult(parsedMeta) {
+            const { header, msgLen, cmdId, seq, crcRecv, parseResult } = parsedMeta;
+            const cmdName = cmdId === 0xF1 ? "心跳状态报文 (0xF1)" : "日志信息2报文 (0xF7)";
+            let html = `<div class="section-title">📋 帧基本信息</div>
+                        <table class="result-table"><tr><th>字段</th><th>原始值(Hex)</th><th>解析值</th></tr>
+                        <tr><td class="field-name">帧头标识</td><td class="raw-value">${header}</td><td>AA0000AA (HUD主动上报)</td></tr>
+                        <tr><td>消息体长度</td><td>0x${msgLen.toString(16).padStart(4,'0')}</td><td>${msgLen} 字节 (${msgLen===54?"符合标准":""})</td></tr>
+                        <tr><td>命令ID</td><td>0x${cmdId.toString(16).toUpperCase()}</td><td>${cmdName}</td></tr>
+                        <tr><td>消息流水号</td><td>0x${seq.toString(16).padStart(2,'0')}</td><td>${seq}</td></tr>
+                        <tr><td>CRC16校验</td><td>0x${crcRecv.toString(16).padStart(4,'0')}</td><td>接收CRC (校验未自动验证)</td></tr>
+                        </table>`;
+            html += `<div class="section-title">🔍 消息体详细解析 (${cmdName})</div><table class="result-table"><tr><th>字段名称</th><th>原始值</th><th>解析内容</th></tr>`;
+            for (let field of parseResult.fields) {
+                html += `<tr><td class="field-name">${field.name}</td><td class="raw-value">${field.raw}</td><td>${field.parsed}</td></tr>`;
+            }
+            if (parseResult.remaining) {
+                html += `<tr><td class="field-name">⚠️ 剩余未定义区域</td><td colspan="2">${parseResult.remaining}</td></tr>`;
+            }
+            html += `</table>`;
+            if (cmdId === 0xF1 && parseResult.basic) {
+                html += `<div class="section-title">📌 故障/开关详情摘要</div><div style="background:#f8fafc;padding:12px;border-radius:16px;margin-top:8px;"><div><strong>🔴 故障位:</strong> ${parseResult.basic.faultDesc}</div><div style="margin-top:8px"><strong>⚙️ 开关状态:</strong> ${parseResult.basic.switchDesc.join("；")}</div></div>`;
+            }
+            return html;
+        }
+
+        // UI 交互
+        const textarea = document.getElementById('hexInput');
+        const parseBtn = document.getElementById('parseBtn');
+        const resultDiv = document.getElementById('resultContainer');
+        const exampleF1 = document.getElementById('exampleF1Btn');
+        const exampleF7 = document.getElementById('exampleF7Btn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        const EXAMPLE_F1 = "AA0000AA0036F1010000E3000102014B4C050005010211000A4B00000001000000000029FD5CE20002000000005001050002800101024802020000000075A02E";
+        // 构建一个合法的F7示例 (基于协议构建典型值)
+        const EXAMPLE_F7_BUILT = "AA0000AA0036F7010100123456780009ABCD0001000200030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        // 修正确保长度合法 (真实有效字节需要54字节payload + CRC2, 此处简单示例)
+        function getValidF7Example() {
+            // 使用一个相对真实的填充：预留00，TFT屏方案0x10, 故障寄存3字节，电机步数等，末尾补0至54字节payload，CRC简单用00占位但展示不影响
+            let payload = "00" + "10" + "010203" + "000A" + "0012" + "0034" + "00000000";
+            while (payload.length < 108) payload += "00";
+            payload = payload.slice(0,108); // 54字节payload
+            const frame = "AA0000AA0036F70101" + payload + "0000";
+            return frame.toUpperCase();
+        }
+
+        function setExample(isF1) {
+            if (isF1) textarea.value = EXAMPLE_F1;
+            else textarea.value = getValidF7Example();
+            resultDiv.innerHTML = `<div style="color:#4b5563; padding:16px; text-align:center;">✨ 已填充示例报文，点击“解析报文”查看结果</div>`;
+        }
+
+        function clear() {
+            textarea.value = '';
+            resultDiv.innerHTML = `<div style="color:#6c757d; padding:20px; text-align:center;">等待输入报文...</div>`;
+        }
+
+        function doParse() {
+            const rawHex = textarea.value.trim();
+            if (!rawHex) {
+                resultDiv.innerHTML = `<div class="error-msg">❌ 请输入十六进制报文</div>`;
+                return;
+            }
+            try {
+                const result = parseMessage(rawHex);
+                const html = renderResult(result);
+                resultDiv.innerHTML = html;
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error-msg">⚠️ 解析失败: ${err.message}</div>`;
+                console.error(err);
+            }
+        }
+
+        parseBtn.addEventListener('click', doParse);
+        exampleF1.addEventListener('click', () => setExample(true));
+        exampleF7.addEventListener('click', () => setExample(false));
+        clearBtn.addEventListener('click', clear);
+        // 初始默认清空提示
+        clear();
+    })();
+</script>
+</body>
+</html>
